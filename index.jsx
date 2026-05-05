@@ -1,0 +1,1129 @@
+import { useState, useRef, useMemo } from "react";
+
+// ── Design Tokens ─────────────────────────────────────────────────────────
+const F = "'Plus Jakarta Sans','Segoe UI',system-ui,sans-serif";
+const RC = {
+  "Daily Essentials":"#4338CA","Master Bedroom":"#C026D3","Baby's Room":"#059669",
+  "Office":"#7C3AED","Master Bathroom":"#0284C7","2nd Bathroom":"#2563EB",
+  "3rd Bathroom":"#16A34A","Stairs":"#D97706","Living Room":"#EA580C",
+  "Dining Room":"#DC2626","Basement":"#6D28D9","Kitchen":"#BE185D",
+  "Dog Care":"#B45309","Front Yard":"#15803D","Back Yard & Patio":"#0F766E",
+  "Whole House":"#4338CA","General":"#4338CA",
+};
+const gc = r => RC[r] || "#4338CA";
+
+const TOASTS = [
+  "Done. Keep that momentum ✓","One step closer to a clean home",
+  "Progress over perfection — that's the move","Your future self is grateful",
+  "Small wins compound fast","That's consistency right there",
+  "The dogs probably noticed 🐾","Clean space, clear mind",
+  "Building the habit, one check at a time","Nice work.",
+];
+
+// ── Date Utilities ────────────────────────────────────────────────────────
+const TODAY    = new Date();
+const DOW      = TODAY.getDay();
+const MONTH    = TODAY.getMonth();
+const getWeekNum = d => Math.min(4, Math.ceil(d.getDate() / 7));
+const WEEKNUM  = getWeekNum(TODAY);
+const getSeason = m => m>=2&&m<=4?"spring":m>=5&&m<=7?"summer":m>=8&&m<=10?"fall":"winter";
+const SEASON   = getSeason(MONTH);
+const DAY_LABEL = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DAY_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MO_LABEL  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+// ── Data: Core Daily Tasks (every day) ───────────────────────────────────
+const CORE = [
+  {id:"c1",text:"Make the bed",time:5},
+  {id:"c2",text:"Wipe kitchen counters",time:5},
+  {id:"c3",text:"Load & run dishwasher",time:8},
+  {id:"c4",text:"Refill dog water & food bowls",time:2},
+  {id:"c5",text:"Quick whole-house clutter sweep",time:5},
+  {id:"c6",text:"Wipe stovetop after cooking",time:4},
+  {id:"c7",text:"Wipe dog paw prints off floors",time:3},
+];
+
+// ── Data: Daily Rotating Schedule ────────────────────────────────────────
+const DAILY = {
+  0:{label:"Sunday",sections:[
+    {room:"Living Room",emoji:"🛋️",tasks:[
+      {id:"su1",text:"Full vacuum including under furniture",time:15},
+      {id:"su2",text:"Steam mop hard floors",time:12},
+      {id:"su3",text:"Wipe walls & baseboards — dog marks",time:10},
+      {id:"su4",text:"Wash throw blankets",time:5},
+    ]},
+    {room:"Master Bedroom",emoji:"🛏️",tasks:[
+      {id:"su5",text:"Full vacuum bedroom floors",time:10},
+      {id:"su6",text:"Dust all surfaces & furniture",time:8},
+      {id:"su7",text:"Wipe baseboards & door frames",time:5},
+    ]},
+    {room:"Dog Care",emoji:"🐾",tasks:[
+      {id:"su8",text:"Wash both dog beds",time:10},
+      {id:"su9",text:"Full wall wipe-down of dog zones",time:10},
+      {id:"su10",text:"Sanitize all dog toys",time:5},
+    ]},
+  ]},
+  1:{label:"Monday",sections:[
+    {room:"Kitchen",emoji:"🍳",tasks:[
+      {id:"mo1",text:"Wipe microwave inside & out",time:5},
+      {id:"mo2",text:"Wipe fridge exterior & handles",time:5},
+      {id:"mo3",text:"Run Keurig rinse cycle",time:8},
+      {id:"mo4",text:"Sweep & mop kitchen floor",time:10},
+      {id:"mo5",text:"Wipe cabinet fronts",time:8},
+      {id:"mo6",text:"Take out trash & wipe bin rim",time:5},
+    ]},
+    {room:"Dining Room",emoji:"🍽️",tasks:[
+      {id:"mo7",text:"Wipe dining table & chairs thoroughly",time:8},
+      {id:"mo8",text:"Sweep & mop dining room floor",time:8},
+      {id:"mo9",text:"Dust light fixture & surfaces",time:5},
+    ]},
+  ]},
+  2:{label:"Tuesday",sections:[
+    {room:"Whole House",emoji:"🗑️",tasks:[
+      {id:"tu0a",text:"Take trash bins to curb (pickup tomorrow)",time:5},
+      {id:"tu0b",text:"Take recycling bins to curb",time:5},
+    ]},
+    {room:"Master Bathroom",emoji:"🚿",tasks:[
+      {id:"tu1",text:"Scrub toilet — bowl, seat & base",time:8},
+      {id:"tu2",text:"Scrub sink & wipe counter",time:5},
+      {id:"tu3",text:"Scrub shower/tub",time:10},
+      {id:"tu4",text:"Wipe mirror",time:3},
+      {id:"tu5",text:"Mop floor",time:5},
+      {id:"tu6",text:"Restock toiletries & toilet paper",time:3},
+    ]},
+    {room:"2nd Bathroom",emoji:"🚽",tasks:[
+      {id:"tu7",text:"Scrub toilet",time:6},
+      {id:"tu8",text:"Wipe sink, counter & mirror",time:5},
+      {id:"tu9",text:"Sweep & mop floor",time:4},
+    ]},
+    {room:"3rd Bathroom",emoji:"🚽",tasks:[
+      {id:"tu10",text:"Scrub toilet",time:6},
+      {id:"tu11",text:"Wipe sink, counter & mirror",time:5},
+      {id:"tu12",text:"Sweep & mop floor",time:4},
+    ]},
+  ]},
+  3:{label:"Wednesday",sections:[
+    {room:"Baby's Room",emoji:"👶",tasks:[
+      {id:"we1",text:"Pick up & organize all toys",time:8},
+      {id:"we2",text:"Wipe all surfaces & crib rails",time:8},
+      {id:"we3",text:"Vacuum & mop floor",time:10},
+      {id:"we4",text:"Restock & organize diaper station",time:5},
+      {id:"we5",text:"Sanitize pacifiers & teething toys",time:5},
+    ]},
+    {room:"Office",emoji:"💻",tasks:[
+      {id:"we6",text:"Clear & wipe desk surface",time:10},
+      {id:"we7",text:"Organize papers & sort mail",time:8},
+      {id:"we8",text:"Dust electronics & shelves",time:5},
+      {id:"we9",text:"Vacuum floor",time:5},
+    ]},
+  ]},
+  4:{label:"Thursday",sections:[
+    {room:"Living Room",emoji:"🛋️",tasks:[
+      {id:"th1",text:"Spot vacuum all dog fur areas",time:12},
+      {id:"th2",text:"Wipe visible wall marks & baseboards",time:8},
+      {id:"th3",text:"Dust surfaces, shelves & entertainment unit",time:10},
+      {id:"th4",text:"Fluff & reset sofa cushions",time:3},
+    ]},
+    {room:"Dog Care",emoji:"🐾",tasks:[
+      {id:"th5",text:"Deep wipe paw prints — floors & walls",time:8},
+      {id:"th6",text:"Clean & rotate dog toys",time:5},
+      {id:"th7",text:"Disinfect dog feeding & water area",time:5},
+    ]},
+  ]},
+  5:{label:"Friday",sections:[
+    {room:"Stairs",emoji:"🪜",tasks:[
+      {id:"fr1",text:"Vacuum both sets of stairs",time:12},
+      {id:"fr2",text:"Wipe both railings",time:5},
+      {id:"fr3",text:"Wipe wall marks — dogs & hands",time:5},
+    ]},
+    {room:"Kitchen",emoji:"🍳",tasks:[
+      {id:"fr4",text:"Deep wipe stovetop & burners",time:8},
+      {id:"fr5",text:"Clean & sanitize kitchen sink",time:5},
+      {id:"fr6",text:"Wipe down all small appliances",time:6},
+      {id:"fr7",text:"Baby bottle sanitizer — run cycle & wipe",time:8},
+    ]},
+  ]},
+  6:{label:"Saturday",sections:[
+    {room:"Front Yard",emoji:"🌿",tasks:[
+      {id:"sa1",text:"Mow front lawn (seasonal)",time:20},
+      {id:"sa2",text:"Edge along walkway & driveway",time:10},
+      {id:"sa3",text:"Pull visible weeds",time:10},
+    ]},
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"sa4",text:"Mow back lawn (seasonal)",time:20},
+      {id:"sa5",text:"Sweep patio",time:5},
+      {id:"sa6",text:"Wipe down patio furniture",time:8},
+      {id:"sa7",text:"Check & cover grill",time:3},
+    ]},
+    {room:"Basement",emoji:"🏚️",tasks:[
+      {id:"sa8",text:"Quick clutter pickup & reset",time:10},
+      {id:"sa9",text:"Vacuum basement floor",time:12},
+    ]},
+  ]},
+};
+
+// ── Data: Weekly Rotation ─────────────────────────────────────────────────
+const WEEKLY = {
+  1:{label:"Week 1",focus:"Bedrooms & Laundry",sections:[
+    {room:"Master Bedroom",emoji:"🛏️",tasks:[
+      {id:"w1a",text:"Change & wash bed sheets",time:15},
+      {id:"w1b",text:"Deep vacuum under bed & all furniture",time:15},
+      {id:"w1c",text:"Dust surfaces & wipe ceiling fan",time:10},
+      {id:"w1d",text:"Wipe baseboards — dog prints",time:5},
+    ]},
+    {room:"Baby's Room",emoji:"👶",tasks:[
+      {id:"w1e",text:"Change & wash crib sheets",time:10},
+      {id:"w1f",text:"Sanitize teething toys & pacifiers",time:8},
+      {id:"w1g",text:"Run & clean baby bottle sanitizer",time:10},
+      {id:"w1h",text:"Check clothing sizes — rotate if needed",time:10},
+    ]},
+    {room:"Dog Care",emoji:"🐾",tasks:[
+      {id:"w1i",text:"Wash both dog beds",time:10},
+      {id:"w1j",text:"Full baseboard & wall wipe — dog zones",time:12},
+    ]},
+  ]},
+  2:{label:"Week 2",focus:"Bathrooms & Office",sections:[
+    {room:"Master Bathroom",emoji:"🚿",tasks:[
+      {id:"w2a",text:"Deep scrub grout & tile",time:20},
+      {id:"w2b",text:"Clean shower drain",time:5},
+      {id:"w2c",text:"Wash bath mats & hand towels",time:8},
+      {id:"w2d",text:"Wipe inside medicine cabinet",time:8},
+    ]},
+    {room:"2nd Bathroom",emoji:"🚽",tasks:[
+      {id:"w2e",text:"Deep scrub grout & tile",time:15},
+      {id:"w2f",text:"Clean drain & wash bath mats",time:8},
+    ]},
+    {room:"3rd Bathroom",emoji:"🚽",tasks:[
+      {id:"w2g",text:"Deep scrub grout & tile",time:15},
+      {id:"w2h",text:"Clean drain & wipe inside cabinets",time:8},
+    ]},
+    {room:"Office",emoji:"💻",tasks:[
+      {id:"w2i",text:"Deep organize desk & all drawers",time:20},
+      {id:"w2j",text:"Dust behind & under all furniture",time:10},
+      {id:"w2k",text:"Wipe screen, keyboard & mouse",time:5},
+      {id:"w2l",text:"Shred or file old documents",time:10},
+    ]},
+  ]},
+  3:{label:"Week 3",focus:"Living Areas & Appliances",sections:[
+    {room:"Living Room",emoji:"🛋️",tasks:[
+      {id:"w3a",text:"Deep clean sofa — vacuum under all cushions",time:15},
+      {id:"w3b",text:"Wash curtains or wipe all blinds",time:12},
+      {id:"w3c",text:"Wipe ceiling fan & light fixtures",time:10},
+      {id:"w3d",text:"Clean behind & under all furniture",time:15},
+    ]},
+    {room:"Dining Room",emoji:"🍽️",tasks:[
+      {id:"w3e",text:"Clean chair legs & under table",time:10},
+      {id:"w3f",text:"Wipe walls & clean light fixture",time:8},
+    ]},
+    {room:"Kitchen",emoji:"🍳",tasks:[
+      {id:"w3h",text:"Deep clean inside fridge — remove everything",time:30},
+      {id:"w3i",text:"Full descale Keurig",time:15},
+      {id:"w3j",text:"Run dishwasher deep cleaner cycle",time:10},
+      {id:"w3k",text:"Deep clean stovetop burners & drip pans",time:15},
+    ]},
+    {room:"Stairs",emoji:"🪜",tasks:[
+      {id:"w3l",text:"Deep vacuum both staircases",time:15},
+      {id:"w3m",text:"Scrub railings & wipe stairway walls",time:12},
+    ]},
+  ]},
+  4:{label:"Week 4",focus:"Yard, Basement & Deep Dog Clean",sections:[
+    {room:"Front Yard",emoji:"🌿",tasks:[
+      {id:"w4a",text:"Edge & trim along fence & all borders",time:20},
+      {id:"w4b",text:"Apply weed treatment",time:10},
+      {id:"w4c",text:"Blow or sweep driveway & walkway",time:10},
+    ]},
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"w4d",text:"Deep clean grill — grates, interior & exterior",time:25},
+      {id:"w4e",text:"Wash all patio furniture thoroughly",time:15},
+      {id:"w4f",text:"Treat lawn for weeds & pests",time:10},
+    ]},
+    {room:"Basement",emoji:"🏚️",tasks:[
+      {id:"w4g",text:"Full deep clean & reorganize",time:40},
+      {id:"w4h",text:"Check for moisture or mold",time:5},
+      {id:"w4i",text:"Sweep & mop entire floor",time:15},
+    ]},
+    {room:"Dog Care",emoji:"🐾",tasks:[
+      {id:"w4j",text:"Deep clean & sanitize both dog beds",time:15},
+      {id:"w4k",text:"Full baseboard & wall scrub throughout house",time:30},
+      {id:"w4l",text:"Fully sanitize all dog toys",time:10},
+    ]},
+  ]},
+};
+
+// ── Data: Monthly Tasks ───────────────────────────────────────────────────
+const MONTHLY = {
+  0:{month:"January",highlight:"New Year Reset",color:"#4338CA",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"jan1",text:"Full declutter & donate — new year reset",time:60,hi:true},
+      {id:"jan2",text:"Deep organize all closets & storage",time:45,hi:true},
+      {id:"jan3",text:"Store holiday decorations",time:30,hi:true},
+      {id:"jan4",text:"Test smoke & CO detectors",time:10},
+      {id:"jan5",text:"Replace HVAC filter",time:10},
+    ]},
+    {room:"Baby's Room",emoji:"👶",tasks:[
+      {id:"jan6",text:"Full deep sanitize — cold & flu season",time:30,hi:true},
+      {id:"jan7",text:"Restock baby medicine cabinet",time:10},
+      {id:"jan8",text:"Clean & check humidifier",time:15,hi:true},
+    ]},
+    {room:"Kitchen",emoji:"🍳",tasks:[
+      {id:"jan9",text:"Clean inside oven",time:25},
+      {id:"jan10",text:"Deep clean inside fridge",time:30},
+      {id:"jan11",text:"Full descale Keurig",time:15},
+    ]},
+  ]},
+  1:{month:"February",highlight:"Indoor Deep Clean",color:"#DB2777",sections:[
+    {room:"Master Bedroom",emoji:"🛏️",tasks:[
+      {id:"feb1",text:"Wash pillows & comforter",time:15},
+      {id:"feb2",text:"Vacuum & rotate mattress",time:20,hi:true},
+      {id:"feb3",text:"Declutter closet — donate unused items",time:25,hi:true},
+    ]},
+    {room:"Living Room",emoji:"🛋️",tasks:[
+      {id:"feb4",text:"Deep clean sofa inside & out",time:20,hi:true},
+      {id:"feb5",text:"Wash curtains or deep wipe all blinds",time:15},
+      {id:"feb6",text:"Clean behind & under all furniture",time:20,hi:true},
+    ]},
+    {room:"Dog Care",emoji:"🐾",tasks:[
+      {id:"feb7",text:"Full wall & baseboard scrub — dog zones",time:30,hi:true},
+      {id:"feb8",text:"Deep sanitize all dog beds & toys",time:20,hi:true},
+    ]},
+  ]},
+  2:{month:"March",highlight:"Spring Prep Begins",color:"#059669",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"mar1",text:"Wash all windows inside & out",time:45,hi:true},
+      {id:"mar2",text:"Replace HVAC filter — spring",time:10,hi:true},
+      {id:"mar3",text:"Full wall wash throughout house",time:60,hi:true},
+    ]},
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"mar5",text:"Rake leftover winter debris",time:30,hi:true},
+      {id:"mar6",text:"Set up & inspect patio furniture",time:15,hi:true},
+      {id:"mar7",text:"Season & prep grill for season",time:20,hi:true},
+    ]},
+    {room:"Baby's Room",emoji:"👶",tasks:[
+      {id:"mar8",text:"Swap seasonal clothing & check sizes",time:20,hi:true},
+      {id:"mar9",text:"Full baby-proofing safety audit",time:15,hi:true},
+    ]},
+  ]},
+  3:{month:"April",highlight:"Spring Deep Clean",color:"#16A34A",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"apr1",text:"Test smoke & CO detectors — replace batteries",time:15},
+      {id:"apr2",text:"Deep clean garage — spring reset",time:60,hi:true},
+      {id:"apr3",text:"Inspect for pests — treat if needed",time:15,hi:true},
+    ]},
+    {room:"Front Yard",emoji:"🌿",tasks:[
+      {id:"apr4",text:"Fertilize front & back lawn",time:20,hi:true},
+      {id:"apr5",text:"Edge & trim along all borders",time:20,hi:true},
+      {id:"apr6",text:"Apply pre-emergent weed treatment",time:15},
+    ]},
+    {room:"Kitchen",emoji:"🍳",tasks:[
+      {id:"apr7",text:"Clean inside oven",time:25},
+      {id:"apr8",text:"Wipe inside all cabinets",time:20},
+      {id:"apr9",text:"Run dishwasher deep cleaner cycle",time:10},
+    ]},
+  ]},
+  4:{month:"May",highlight:"AC Check & Pre-Summer",color:"#D97706",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"may1",text:"Check & service AC unit before summer",time:20,hi:true},
+      {id:"may2",text:"Replace HVAC filter",time:10,hi:true},
+      {id:"may3",text:"Inspect for early summer pests",time:15},
+    ]},
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"may4",text:"Power wash patio",time:30,hi:true},
+      {id:"may5",text:"Deep clean grill for season",time:25,hi:true},
+      {id:"may6",text:"Inspect patio furniture for wear",time:10},
+    ]},
+    {room:"Master Bathroom",emoji:"🚿",tasks:[
+      {id:"may7",text:"Deep scrub all grout & tile",time:20},
+      {id:"may8",text:"Wash shower liner & bath mats",time:10},
+    ]},
+  ]},
+  5:{month:"June",highlight:"Summer Outdoor Maintenance",color:"#EA580C",sections:[
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"jun1",text:"Treat lawn for summer weeds & pests",time:20,hi:true},
+      {id:"jun2",text:"Inspect fences & outdoor structures",time:15,hi:true},
+      {id:"jun3",text:"Deep clean patio furniture",time:15},
+    ]},
+    {room:"Basement",emoji:"🏚️",tasks:[
+      {id:"jun4",text:"Full deep clean & reorganize basement",time:45},
+      {id:"jun5",text:"Check for moisture or mold — summer heat",time:10,hi:true},
+    ]},
+    {room:"Master Bedroom",emoji:"🛏️",tasks:[
+      {id:"jun6",text:"Swap to summer bedding",time:15,hi:true},
+      {id:"jun7",text:"Declutter closet — summer rotation",time:25,hi:true},
+    ]},
+  ]},
+  6:{month:"July",highlight:"Mid-Summer Reset",color:"#DC2626",sections:[
+    {room:"Front Yard",emoji:"🌿",tasks:[
+      {id:"jul1",text:"Treat lawn for mid-summer heat stress",time:15,hi:true},
+      {id:"jul2",text:"Pull weeds — front & back",time:20,hi:true},
+    ]},
+    {room:"Kitchen",emoji:"🍳",tasks:[
+      {id:"jul3",text:"Deep clean inside fridge",time:30},
+      {id:"jul4",text:"Clean inside oven",time:25},
+      {id:"jul5",text:"Deep clean baby bottle sanitizer",time:10,hi:true},
+    ]},
+    {room:"Dog Care",emoji:"🐾",tasks:[
+      {id:"jul6",text:"Full wall & baseboard scrub throughout house",time:30,hi:true},
+      {id:"jul7",text:"Deep sanitize dog beds & toys",time:20},
+    ]},
+  ]},
+  7:{month:"August",highlight:"Back-to-Routine Reset",color:"#7C3AED",sections:[
+    {room:"Office",emoji:"💻",tasks:[
+      {id:"aug1",text:"Full office deep organize & declutter",time:30,hi:true},
+      {id:"aug2",text:"Shred old documents & clear files",time:20,hi:true},
+    ]},
+    {room:"Baby's Room",emoji:"👶",tasks:[
+      {id:"aug3",text:"Full baby-proofing audit — new milestones",time:20,hi:true},
+      {id:"aug4",text:"Check & restock baby supply inventory",time:10,hi:true},
+    ]},
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"aug5",text:"Deep declutter & reset all common areas",time:45,hi:true},
+      {id:"aug6",text:"Replace HVAC filter",time:10},
+    ]},
+  ]},
+  8:{month:"September",highlight:"Fall Prep Check",color:"#D97706",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"sep1",text:"Schedule heating system service",time:15,hi:true},
+      {id:"sep2",text:"Replace HVAC filter — heating season",time:10,hi:true},
+      {id:"sep3",text:"Check weatherstripping on all entries",time:20,hi:true},
+    ]},
+    {room:"Master Bedroom",emoji:"🛏️",tasks:[
+      {id:"sep4",text:"Deep closet cleanout — swap to fall clothes",time:45,hi:true},
+      {id:"sep5",text:"Swap to fall/winter bedding",time:15,hi:true},
+    ]},
+    {room:"Baby's Room",emoji:"👶",tasks:[
+      {id:"sep6",text:"Swap to warmer clothing & check sizes",time:20,hi:true},
+      {id:"sep7",text:"Safety audit — new mobility milestones",time:15,hi:true},
+    ]},
+  ]},
+  9:{month:"October",highlight:"Leaf Season & Gutters",color:"#EA580C",sections:[
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"oct1",text:"Rake & bag ALL leaves — front & back",time:90,hi:true},
+      {id:"oct2",text:"Clean gutters thoroughly",time:45,hi:true},
+      {id:"oct3",text:"Winterize grill & store accessories",time:15,hi:true},
+      {id:"oct4",text:"Store or cover all patio furniture",time:20,hi:true},
+      {id:"oct5",text:"Final lawn fertilize before winter",time:20,hi:true},
+      {id:"oct6",text:"Drain & store outdoor hoses",time:10,hi:true},
+    ]},
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"oct7",text:"Deep clean garage before winter",time:60,hi:true},
+      {id:"oct8",text:"Inspect for drafts & seal as needed",time:20},
+    ]},
+  ]},
+  10:{month:"November",highlight:"Pre-Holiday Deep Clean",color:"#6D28D9",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"nov1",text:"Full pre-holiday deep clean — top to bottom",time:90,hi:true},
+      {id:"nov2",text:"Check pipes for cold weather",time:20,hi:true},
+      {id:"nov3",text:"Check fire extinguisher",time:5},
+    ]},
+    {room:"Kitchen",emoji:"🍳",tasks:[
+      {id:"nov4",text:"Deep clean inside oven — holiday prep",time:25,hi:true},
+      {id:"nov5",text:"Deep clean fridge — holiday prep",time:30,hi:true},
+      {id:"nov6",text:"Organize & restock pantry",time:25,hi:true},
+    ]},
+    {room:"Baby's Room",emoji:"👶",tasks:[
+      {id:"nov7",text:"Full deep sanitize — cold & flu season",time:30,hi:true},
+      {id:"nov8",text:"Restock baby medicine cabinet",time:10,hi:true},
+    ]},
+  ]},
+  11:{month:"December",highlight:"Winterize & Year-End Reset",color:"#0284C7",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"dec1",text:"Check all pipes for freezing risk",time:20,hi:true},
+      {id:"dec2",text:"Full year-end declutter & donate",time:60,hi:true},
+      {id:"dec3",text:"Store holiday decorations neatly",time:30,hi:true},
+      {id:"dec4",text:"Deep clean & organize basement storage",time:45,hi:true},
+    ]},
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"dec5",text:"Confirm grill cover is secure",time:5},
+      {id:"dec6",text:"Check patio furniture in storage",time:10},
+      {id:"dec7",text:"Clear snow & ice from walkways as needed",time:20,hi:true},
+    ]},
+  ]},
+};
+
+// ── Data: Seasonal ────────────────────────────────────────────────────────
+const SEASONAL = {
+  spring:{label:"Spring 🌸",color:"#059669",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"sp1",text:"Change HVAC air filter",time:10},
+      {id:"sp2",text:"Wash all windows inside & out",time:45},
+      {id:"sp3",text:"Deep clean all ceiling fans",time:20},
+      {id:"sp4",text:"Test smoke & CO detectors — replace batteries",time:15},
+      {id:"sp5",text:"Full wall wash throughout house",time:60},
+    ]},
+    {room:"Baby's Room",emoji:"👶",tasks:[
+      {id:"sp6",text:"Full seasonal deep sanitize",time:30},
+      {id:"sp7",text:"Swap seasonal clothing & check sizes",time:20},
+      {id:"sp8",text:"Full baby-proofing safety audit",time:15},
+    ]},
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"sp9",text:"Rake leftover winter debris",time:30},
+      {id:"sp10",text:"Fertilize front & back lawn",time:20},
+      {id:"sp11",text:"Set up & inspect patio furniture",time:15},
+      {id:"sp12",text:"Season & prep grill",time:20},
+      {id:"sp13",text:"Check outdoor hoses & water hookups",time:10},
+    ]},
+  ]},
+  summer:{label:"Summer ☀️",color:"#D97706",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"su_wh1",text:"Check & service AC unit",time:15},
+      {id:"su_wh2",text:"Deep clean garage",time:60},
+      {id:"su_wh3",text:"Inspect for pests & treat if needed",time:15},
+      {id:"su_wh4",text:"Check weatherstripping on doors & windows",time:20},
+    ]},
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"su_y1",text:"Deep clean grill mid-season",time:25},
+      {id:"su_y2",text:"Inspect patio furniture for wear or rust",time:10},
+      {id:"su_y3",text:"Treat lawn for summer weeds & pests",time:20},
+      {id:"su_y4",text:"Inspect fences & outdoor structures",time:15},
+      {id:"su_y5",text:"Power wash patio",time:30},
+    ]},
+  ]},
+  fall:{label:"Fall 🍂",color:"#EA580C",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"fa1",text:"Change HVAC filter before heating season",time:10},
+      {id:"fa2",text:"Schedule heating system service",time:15},
+      {id:"fa3",text:"Deep closet cleanout — swap seasonal clothes",time:45},
+      {id:"fa4",text:"Test smoke & CO detectors",time:10},
+    ]},
+    {room:"Baby's Room",emoji:"👶",tasks:[
+      {id:"fa6",text:"Swap to warmer clothing & check sizes",time:20},
+      {id:"fa7",text:"Safety audit — new mobility milestones",time:15},
+    ]},
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"fa8",text:"Rake & bag ALL leaves — front & back",time:90},
+      {id:"fa9",text:"Clean gutters thoroughly",time:45},
+      {id:"fa10",text:"Winterize grill — cover & store accessories",time:15},
+      {id:"fa11",text:"Store or cover all patio furniture",time:20},
+      {id:"fa12",text:"Final lawn fertilize before winter",time:20},
+      {id:"fa13",text:"Drain & store outdoor hoses",time:10},
+    ]},
+  ]},
+  winter:{label:"Winter ❄️",color:"#0284C7",sections:[
+    {room:"Whole House",emoji:"🏠",tasks:[
+      {id:"wi1",text:"Check pipes for freezing risk & insulate",time:20},
+      {id:"wi2",text:"Full declutter & donate session",time:60},
+      {id:"wi3",text:"Deep clean & organize basement storage",time:45},
+      {id:"wi4",text:"Check fire extinguisher",time:5},
+      {id:"wi5",text:"Store holiday decorations neatly",time:30},
+    ]},
+    {room:"Baby's Room",emoji:"👶",tasks:[
+      {id:"wi6",text:"Full deep sanitize — cold & flu season",time:30},
+      {id:"wi7",text:"Clean & check humidifier",time:15},
+      {id:"wi8",text:"Restock baby medicine cabinet",time:10},
+    ]},
+    {room:"Back Yard & Patio",emoji:"🌴",tasks:[
+      {id:"wi9",text:"Confirm grill cover is secure",time:5},
+      {id:"wi10",text:"Check patio furniture in storage",time:10},
+      {id:"wi11",text:"Clear snow & ice from walkways as needed",time:20},
+    ]},
+  ]},
+};
+
+// ── Main Component ────────────────────────────────────────────────────────
+export default function ADHDCleaningPlanner() {
+  const [nav, setNav]           = useState("dashboard");
+  const [selDay, setSelDay]     = useState(DOW);
+  const [selWeek, setSelWeek]   = useState(WEEKNUM);
+  const [selMonth, setSelMonth] = useState(MONTH);
+  const [selSeason, setSelSeason] = useState(SEASON);
+  const [dashTab, setDashTab]   = useState("today");
+  const [checked, setChecked]   = useState({});
+  const [overdueOpen, setOverdueOpen] = useState(true);
+  const [toast, setToast]       = useState(null);
+  const [lastAction, setLastAction] = useState(null);
+  const toastRef = useRef(null);
+
+  // Key generators — unique per context so tabs don't bleed into each other
+  const ck = (id, d) => `c_${id}_${d}`;
+  const dk = (id, d) => `d_${id}_${d}`;
+  const wk = (id, w) => `w_${id}_${w}`;
+  const mk = (id, m) => `m_${id}_${m}`;
+  const sk = (id, s) => `s_${id}_${s}`;
+
+  const showToast = msg => {
+    setToast(msg);
+    if (toastRef.current) clearTimeout(toastRef.current);
+    toastRef.current = setTimeout(() => setToast(null), 3200);
+  };
+
+  const toggle = key => {
+    setChecked(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      setLastAction({ key, prevVal: !!prev[key] });
+      if (!prev[key]) setTimeout(() => showToast(TOASTS[Math.floor(Math.random() * TOASTS.length)]), 0);
+      return next;
+    });
+  };
+
+  const undo = () => {
+    if (!lastAction) return;
+    setChecked(prev => ({ ...prev, [lastAction.key]: lastAction.prevVal }));
+    setLastAction(null);
+    showToast("Undone.");
+  };
+
+  // Overdue: rotating tasks from days before today this week
+  const overdueTasks = useMemo(() => {
+    const items = [];
+    for (let d = 0; d < DOW; d++) {
+      const day = DAILY[d]; if (!day) continue;
+      day.sections.forEach(s => s.tasks.forEach(t => {
+        if (!checked[dk(t.id, d)])
+          items.push({ ...t, room: s.room, emoji: s.emoji, fromDay: DAY_SHORT[d], d });
+      }));
+    }
+    return items;
+  }, [checked]);
+
+  // Today stats
+  const todayRot   = (DAILY[DOW]?.sections || []).flatMap(s => s.tasks);
+  const todayDone  = CORE.filter(t => checked[ck(t.id, DOW)]).length + todayRot.filter(t => checked[dk(t.id, DOW)]).length;
+  const todayTotal = CORE.length + todayRot.length;
+  const todayPct   = todayTotal ? Math.round(todayDone / todayTotal * 100) : 0;
+  const todayLeft  = [
+    ...CORE.filter(t => !checked[ck(t.id, DOW)]),
+    ...todayRot.filter(t => !checked[dk(t.id, DOW)]),
+  ].reduce((a, t) => a + t.time, 0);
+
+  // Week stats
+  const weekTasks = (WEEKLY[WEEKNUM]?.sections || []).flatMap(s => s.tasks);
+  const weekDone  = weekTasks.filter(t => checked[wk(t.id, WEEKNUM)]).length;
+  const weekPct   = weekTasks.length ? Math.round(weekDone / weekTasks.length * 100) : 0;
+
+  // ── Section Card Renderer ─────────────────────────────────────────────
+  const renderSection = (section, keyFn, showHi = false) => {
+    const color  = gc(section.room);
+    const tasks  = section.tasks;
+    const done   = tasks.filter(t => checked[keyFn(t.id)]).length;
+    const pct    = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+    const full   = done === tasks.length;
+
+    return (
+      <div key={section.room + keyFn.toString()} style={{
+        background: "#fff", borderRadius: 10, marginBottom: 10,
+        borderLeft: `4px solid ${color}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.03)",
+        overflow: "hidden", opacity: full ? 0.78 : 1, transition: "opacity 0.35s",
+      }}>
+        {/* Card header */}
+        <div style={{ padding: "11px 14px 9px", borderBottom: "1px solid #F4F4F4" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ fontSize: 15 }}>{section.emoji}</span>
+              <span style={{ fontWeight: 700, fontSize: 13, color: "#111827" }}>{section.room}</span>
+              {full && <span style={{ fontSize: 11, color: color, fontWeight: 700 }}>✓ Done</span>}
+            </div>
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: color,
+              background: `${color}14`, padding: "2px 8px", borderRadius: 99,
+            }}>{done}/{tasks.length} · {pct}%</span>
+          </div>
+          <div style={{ marginTop: 7, height: 4, background: "#F0F0F0", borderRadius: 99, overflow: "hidden" }}>
+            <div style={{
+              height: "100%", width: `${pct}%`, background: color,
+              borderRadius: 99, transition: "width 0.4s ease",
+            }} />
+          </div>
+        </div>
+
+        {/* Task rows */}
+        {tasks.map((task, i) => {
+          const k   = keyFn(task.id);
+          const isc = !!checked[k];
+          return (
+            <div key={task.id} onClick={() => toggle(k)} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "9px 14px",
+              borderBottom: i < tasks.length - 1 ? "1px solid #F7F7F7" : "none",
+              cursor: "pointer",
+              background: task.hi && showHi && !isc ? `${color}07` : isc ? "#FBFBFC" : "#fff",
+              transition: "background 0.12s",
+            }}>
+              {/* Custom checkbox */}
+              <div style={{
+                width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                border: isc ? "none" : "1.5px solid #D1D5DB",
+                background: isc ? color : "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.18s",
+                boxShadow: isc ? `0 0 0 2px ${color}30` : "none",
+              }}>
+                {isc && (
+                  <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
+                    <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+
+              {/* Task text */}
+              <span style={{
+                fontSize: 13, fontWeight: 500, flex: 1, lineHeight: 1.45,
+                color: isc ? "#9CA3AF" : "#1F2937",
+                textDecoration: isc ? "line-through" : "none",
+                transition: "all 0.2s",
+              }}>
+                {task.text}
+                {task.hi && showHi && !isc && (
+                  <span style={{
+                    marginLeft: 7, fontSize: 10, fontWeight: 700,
+                    color: color, background: `${color}18`,
+                    padding: "1px 6px", borderRadius: 99,
+                  }}>Focus</span>
+                )}
+              </span>
+
+              {/* Time */}
+              <span style={{
+                fontSize: 11, fontWeight: 600, flexShrink: 0,
+                color: isc ? "#D1D5DB" : "#9CA3AF",
+              }}>{task.time}m</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ── Overdue Banner ────────────────────────────────────────────────────
+  const renderOverdueBanner = () => {
+    if (overdueTasks.length === 0) return null;
+    return (
+      <div style={{
+        background: "#FFFBEB", border: "1px solid #FDE68A",
+        borderRadius: 10, marginBottom: 12, overflow: "hidden",
+      }}>
+        <div
+          onClick={() => setOverdueOpen(o => !o)}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "11px 14px", cursor: "pointer",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>⚠️</span>
+            <span style={{ fontWeight: 700, fontSize: 13, color: "#92400E" }}>
+              {overdueTasks.length} task{overdueTasks.length > 1 ? "s" : ""} rolled over from earlier this week
+            </span>
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#B45309" }}>
+            {overdueOpen ? "▲" : "▼"}
+          </span>
+        </div>
+        {overdueOpen && (
+          <div style={{ borderTop: "1px solid #FDE68A" }}>
+            {overdueTasks.map((task, i) => {
+              const k   = dk(task.id, task.d);
+              const isc = !!checked[k];
+              return (
+                <div key={k} onClick={() => toggle(k)} style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "9px 14px",
+                  borderBottom: i < overdueTasks.length - 1 ? "1px solid #FEF3C7" : "none",
+                  cursor: "pointer", background: "#FFFBEB",
+                }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                    border: isc ? "none" : "1.5px solid #FCD34D",
+                    background: isc ? "#D97706" : "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    {isc && (
+                      <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
+                        <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: 13, fontWeight: 500, flex: 1, lineHeight: 1.4,
+                    color: isc ? "#9CA3AF" : "#78350F",
+                    textDecoration: isc ? "line-through" : "none",
+                  }}>{task.text}</span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, color: "#B45309",
+                    background: "#FEF3C7", padding: "1px 7px", borderRadius: 99, flexShrink: 0,
+                  }}>{task.fromDay}</span>
+                  <span style={{ fontSize: 11, color: "#9CA3AF", flexShrink: 0 }}>{task.time}m</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── Sub-tab pill renderer ──────────────────────────────────────────────
+  const TabBar = ({ options, value, onChange, accent = "#1C1C2E" }) => (
+    <div style={{
+      display: "flex", gap: 6, marginBottom: 14,
+      background: "#fff", borderRadius: 10, padding: 7,
+      boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
+    }}>
+      {options.map(o => {
+        const sel = o.value === value;
+        return (
+          <button key={o.value} onClick={() => onChange(o.value)} style={{
+            flex: 1, padding: "7px 6px", border: "none", borderRadius: 7,
+            fontFamily: F, fontWeight: 700, fontSize: 11, cursor: "pointer",
+            background: sel ? accent : "transparent",
+            color: sel ? "#fff" : o.accent || "#6B7280",
+            transition: "all 0.18s",
+          }}>
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // ── DASHBOARD ─────────────────────────────────────────────────────────
+  const renderDashboard = () => (
+    <div>
+      {/* Summary card */}
+      <div style={{
+        background: "#fff", borderRadius: 10, marginBottom: 12, padding: "16px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.03)",
+      }}>
+        <div style={{
+          fontSize: 10, fontWeight: 700, color: "#9CA3AF",
+          letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12,
+        }}>At a Glance</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[
+            { label: "Today", val: `${todayPct}%`, sub: `${todayDone} of ${todayTotal} tasks`, color: "#2563EB" },
+            { label: `Week ${WEEKNUM}`, val: `${weekPct}%`, sub: `${weekDone} of ${weekTasks.length} tasks`, color: "#059669" },
+            { label: "Overdue", val: overdueTasks.length, sub: "rolled forward", color: overdueTasks.length > 0 ? "#D97706" : "#6B7280" },
+          ].map(s => (
+            <div key={s.label} style={{
+              flex: 1, background: "#F9FAFB", borderRadius: 8,
+              padding: "10px 11px", borderLeft: `3px solid ${s.color}`,
+            }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{s.label}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
+              <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 3 }}>{s.sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Today / This Week tabs */}
+      <TabBar
+        options={[{ value: "today", label: "Today's Tasks" }, { value: "week", label: "This Week" }]}
+        value={dashTab}
+        onChange={setDashTab}
+      />
+
+      {dashTab === "today" && (
+        <div>
+          {renderOverdueBanner()}
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 8 }}>
+            Every Day
+          </div>
+          {renderSection(
+            { room: "Daily Essentials", emoji: "✓", tasks: CORE },
+            id => ck(id, DOW)
+          )}
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", margin: "14px 0 8px" }}>
+            {DAY_LABEL[DOW]}'s Focus
+          </div>
+          {(DAILY[DOW]?.sections || []).map(s => renderSection(s, id => dk(id, DOW)))}
+        </div>
+      )}
+
+      {dashTab === "week" && (
+        <div>
+          <div style={{
+            background: "#fff", borderRadius: 10, marginBottom: 12,
+            padding: "12px 14px", borderLeft: `4px solid ${gc("Office")}`,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              {MO_LABEL[MONTH]} · {WEEKLY[WEEKNUM]?.label}
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 16, color: "#111827", marginTop: 2 }}>
+              {WEEKLY[WEEKNUM]?.focus}
+            </div>
+          </div>
+          {(WEEKLY[WEEKNUM]?.sections || []).map(s => renderSection(s, id => wk(id, WEEKNUM)))}
+        </div>
+      )}
+    </div>
+  );
+
+  // ── DAILY ─────────────────────────────────────────────────────────────
+  const renderDaily = () => (
+    <div>
+      <TabBar
+        options={[0,1,2,3,4,5,6].map(d => ({
+          value: d,
+          label: DAY_SHORT[d],
+          accent: d === DOW ? "#2563EB" : "#9CA3AF",
+        }))}
+        value={selDay}
+        onChange={setSelDay}
+        accent="#1C1C2E"
+      />
+
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 14 }}>
+        <span style={{ fontWeight: 800, fontSize: 20, color: "#111827" }}>{DAY_LABEL[selDay]}</span>
+        {selDay === DOW && (
+          <span style={{
+            fontSize: 11, fontWeight: 700, color: "#fff", background: "#2563EB",
+            padding: "2px 8px", borderRadius: 99,
+          }}>Today</span>
+        )}
+      </div>
+
+      {selDay === DOW && renderOverdueBanner()}
+
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 8 }}>
+        Every Day
+      </div>
+      {renderSection({ room: "Daily Essentials", emoji: "✓", tasks: CORE }, id => ck(id, selDay))}
+
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", margin: "14px 0 8px" }}>
+        {DAY_LABEL[selDay]}'s Focus
+      </div>
+      {(DAILY[selDay]?.sections || []).map(s => renderSection(s, id => dk(id, selDay)))}
+    </div>
+  );
+
+  // ── WEEKLY ────────────────────────────────────────────────────────────
+  const renderWeekly = () => (
+    <div>
+      <TabBar
+        options={[1,2,3,4].map(w => ({
+          value: w,
+          label: w === WEEKNUM ? `Week ${w} · Now` : `Week ${w}`,
+          accent: w === WEEKNUM ? "#059669" : "#9CA3AF",
+        }))}
+        value={selWeek}
+        onChange={setSelWeek}
+        accent="#1C1C2E"
+      />
+
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 14 }}>
+        <span style={{ fontWeight: 800, fontSize: 20, color: "#111827" }}>{WEEKLY[selWeek]?.label}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#6B7280" }}>{WEEKLY[selWeek]?.focus}</span>
+      </div>
+
+      {(WEEKLY[selWeek]?.sections || []).map(s => renderSection(s, id => wk(id, selWeek)))}
+    </div>
+  );
+
+  // ── MONTHLY ───────────────────────────────────────────────────────────
+  const renderMonthly = () => {
+    const md     = MONTHLY[selMonth];
+    const mColor = md?.color || "#4338CA";
+    const isNow  = selMonth === MONTH;
+    return (
+      <div>
+        {/* Month scroll */}
+        <div style={{
+          display: "flex", gap: 4, marginBottom: 14,
+          background: "#fff", borderRadius: 10, padding: 7,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
+          overflowX: "auto", scrollbarWidth: "none",
+        }}>
+          {Array.from({ length: 12 }, (_, i) => {
+            const sel = i === selMonth;
+            const now = i === MONTH;
+            const mc  = MONTHLY[i]?.color || "#4338CA";
+            return (
+              <button key={i} onClick={() => setSelMonth(i)} style={{
+                flexShrink: 0, padding: "6px 10px", border: "none", borderRadius: 6,
+                fontFamily: F, fontWeight: 700, fontSize: 10, cursor: "pointer",
+                background: sel ? mc : "transparent",
+                color: sel ? "#fff" : now ? mc : "#9CA3AF",
+                transition: "all 0.18s",
+                position: "relative",
+              }}>
+                {MO_LABEL[i].slice(0, 3)}
+                {now && !sel && (
+                  <span style={{
+                    display: "block", width: 4, height: 4,
+                    background: mc, borderRadius: "50%", margin: "2px auto 0",
+                  }} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {md && (
+          <div>
+            <div style={{
+              background: "#fff", borderRadius: 10, marginBottom: 12,
+              padding: "13px 14px", borderLeft: `4px solid ${mColor}`,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
+            }}>
+              <div style={{ fontWeight: 800, fontSize: 20, color: "#111827" }}>{md.month}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 5 }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, color: mColor,
+                  background: `${mColor}18`, padding: "2px 8px", borderRadius: 99,
+                }}>{isNow ? "This Month's Focus" : "Monthly Focus"}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#6B7280" }}>{md.highlight}</span>
+              </div>
+              {!isNow && (
+                <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 6 }}>
+                  ★ tasks are highlighted when viewing the current month
+                </div>
+              )}
+            </div>
+            {md.sections.map(s => renderSection(s, id => mk(id, selMonth), isNow))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ── SEASONAL ──────────────────────────────────────────────────────────
+  const renderSeasonal = () => {
+    const sd    = SEASONAL[selSeason];
+    const isNow = selSeason === SEASON;
+    return (
+      <div>
+        <TabBar
+          options={Object.entries(SEASONAL).map(([key, s]) => ({
+            value: key,
+            label: s.label,
+            accent: key === SEASON ? s.color : "#9CA3AF",
+          }))}
+          value={selSeason}
+          onChange={setSelSeason}
+          accent={sd?.color || "#4338CA"}
+        />
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <span style={{ fontWeight: 800, fontSize: 20, color: "#111827" }}>{sd?.label}</span>
+          {isNow && (
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: "#fff",
+              background: sd?.color, padding: "2px 8px", borderRadius: 99,
+            }}>Current Season</span>
+          )}
+        </div>
+
+        {sd?.sections.map(s => renderSection(s, id => sk(id, selSeason)))}
+      </div>
+    );
+  };
+
+  // ── NAV CONFIG ────────────────────────────────────────────────────────
+  const NAV = [
+    { id: "dashboard", label: "Dashboard" },
+    { id: "daily",     label: "Daily"     },
+    { id: "weekly",    label: "Weekly"    },
+    { id: "monthly",   label: "Monthly"   },
+    { id: "seasonal",  label: "Seasonal"  },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#F0F2F5", fontFamily: F }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        * { box-sizing: border-box; margin: 0; }
+        ::-webkit-scrollbar { display: none; }
+        button { font-family: inherit; }
+        @keyframes slideUp {
+          from { transform: translateX(-50%) translateY(60px); opacity: 0; }
+          to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+        }
+      `}</style>
+
+      {/* ── HEADER ── */}
+      <div style={{ background: "#1C1C2E", color: "#fff", paddingTop: 20 }}>
+        <div style={{ maxWidth: 700, margin: "0 auto", padding: "0 16px" }}>
+
+          {/* Title row */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+            <div>
+              <div style={{
+                fontSize: 10, fontWeight: 700, color: "#6B7280",
+                letterSpacing: "0.09em", textTransform: "uppercase", marginBottom: 3,
+              }}>
+                {TODAY.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.4px" }}>
+                My Cleaning Planner
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+              {lastAction && (
+                <button onClick={undo} style={{
+                  background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)",
+                  color: "#fff", borderRadius: 8, padding: "5px 12px",
+                  fontFamily: F, fontWeight: 700, fontSize: 11, cursor: "pointer",
+                  letterSpacing: "0.03em", transition: "background 0.15s",
+                }}>↩ Undo</button>
+              )}
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Today</div>
+                <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, color: todayPct >= 100 ? "#34D399" : "#fff" }}>
+                  {todayPct}%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick stats row */}
+          <div style={{ display: "flex", gap: 8, paddingBottom: 14 }}>
+            {[
+              { label: "Done today",   val: `${todayDone}/${todayTotal}`, color: "#60A5FA" },
+              { label: "Est. left",    val: `~${todayLeft}m`,             color: "#34D399" },
+              { label: "Overdue",      val: overdueTasks.length,          color: overdueTasks.length > 0 ? "#FBBF24" : "#4B5563" },
+            ].map(s => (
+              <div key={s.label} style={{
+                flex: 1, background: "rgba(255,255,255,0.06)",
+                borderRadius: 8, padding: "8px 10px",
+              }}>
+                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
+                  {s.label}
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: s.color }}>{s.val}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Nav tabs */}
+          <div style={{ display: "flex", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            {NAV.map(t => (
+              <button key={t.id} onClick={() => setNav(t.id)} style={{
+                flex: 1, padding: "10px 2px", border: "none", background: "transparent",
+                fontWeight: 700, fontSize: 10, letterSpacing: "0.04em", cursor: "pointer",
+                color: nav === t.id ? "#fff" : "#6B7280",
+                borderBottom: nav === t.id ? "2px solid #60A5FA" : "2px solid transparent",
+                transition: "all 0.18s",
+              }}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── CONTENT ── */}
+      <div style={{ maxWidth: 700, margin: "0 auto", padding: "16px 16px 60px" }}>
+        {nav === "dashboard" && renderDashboard()}
+        {nav === "daily"     && renderDaily()}
+        {nav === "weekly"    && renderWeekly()}
+        {nav === "monthly"   && renderMonthly()}
+        {nav === "seasonal"  && renderSeasonal()}
+      </div>
+
+      {/* ── TOAST ── */}
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 24, left: "50%",
+          background: "#1C1C2E", color: "#fff",
+          borderRadius: 10, padding: "11px 22px",
+          fontWeight: 700, fontSize: 13,
+          border: "1px solid rgba(255,255,255,0.12)",
+          boxShadow: "0 8px 28px rgba(0,0,0,0.35)",
+          animation: "slideUp 0.25s ease",
+          zIndex: 999, whiteSpace: "nowrap", maxWidth: "90vw",
+          transform: "translateX(-50%)", textAlign: "center",
+        }}>{toast}</div>
+      )}
+    </div>
+  );
+}
