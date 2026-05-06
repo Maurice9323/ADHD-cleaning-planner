@@ -1,39 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>ADHD Cleaning Planner</title>
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- React & ReactDOM from CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
-  <!-- Babel Standalone for in-browser JSX compilation -->
-  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1C1C2E" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cleaner" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <title>My Cleaning Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-    }
-    ::-webkit-scrollbar {
-      display: none;
-    }
-    body {
-      margin: 0;
-      background: #F0F2F5;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { height: 100%; }
+    body { background: #1C1C2E; font-family: 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif; }
+    ::-webkit-scrollbar { display: none; }
+    button { font-family: inherit; }
     @keyframes slideUp {
       from { transform: translateX(-50%) translateY(60px); opacity: 0; }
       to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
     }
+    .loading {
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh; color: #6B7280; font-size: 14px; font-weight: 600;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root"><div class="loading">Loading planner…</div></div>
 
-  <script type="text/babel" data-presets="react">
-    // ── Design Tokens ─────────────────────────────────────────────────────────
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useRef, useMemo } = React;
+
+    // ── Design Tokens ───────────────────────────────────────────────────
     const F = "'Plus Jakarta Sans','Segoe UI',system-ui,sans-serif";
     const RC = {
       "Daily Essentials":"#4338CA","Master Bedroom":"#C026D3","Baby's Room":"#059669",
@@ -53,7 +60,7 @@
       "Building the habit, one check at a time","Nice work.",
     ];
 
-    // ── Date Utilities ────────────────────────────────────────────────────────
+    // ── Date Utilities ─────────────────────────────────────────────────
     const TODAY    = new Date();
     const DOW      = TODAY.getDay();
     const MONTH    = TODAY.getMonth();
@@ -65,7 +72,7 @@
     const DAY_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
     const MO_LABEL  = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-    // ── Data: Core Daily Tasks (every day) ───────────────────────────────────
+    // ── Core Daily Tasks ───────────────────────────────────────────────
     const CORE = [
       {id:"c1",text:"Make the bed",time:5},
       {id:"c2",text:"Wipe kitchen counters",time:5},
@@ -76,7 +83,7 @@
       {id:"c7",text:"Wipe dog paw prints off floors",time:3},
     ];
 
-    // ── Data: Daily Rotating Schedule ────────────────────────────────────────
+    // ── Daily Rotating Schedule ────────────────────────────────────────
     const DAILY = {
       0:{label:"Sunday",sections:[
         {room:"Living Room",emoji:"🛋️",tasks:[
@@ -195,7 +202,7 @@
       ]},
     };
 
-    // ── Data: Weekly Rotation ─────────────────────────────────────────────────
+    // ── Weekly Rotation ────────────────────────────────────────────────
     const WEEKLY = {
       1:{label:"Week 1",focus:"Bedrooms & Laundry",sections:[
         {room:"Master Bedroom",emoji:"🛏️",tasks:[
@@ -283,7 +290,7 @@
       ]},
     };
 
-    // ── Data: Monthly Tasks ───────────────────────────────────────────────────
+    // ── Monthly Tasks ──────────────────────────────────────────────────
     const MONTHLY = {
       0:{month:"January",highlight:"New Year Reset",color:"#4338CA",sections:[
         {room:"Whole House",emoji:"🏠",tasks:[
@@ -473,7 +480,7 @@
       ]},
     };
 
-    // ── Data: Seasonal ────────────────────────────────────────────────────────
+    // ── Seasonal ───────────────────────────────────────────────────────
     const SEASONAL = {
       spring:{label:"Spring 🌸",color:"#059669",sections:[
         {room:"Whole House",emoji:"🏠",tasks:[
@@ -552,25 +559,25 @@
       ]},
     };
 
-    // ── Main Component ────────────────────────────────────────────────────────
+    // ── Main App ───────────────────────────────────────────────────────
     function ADHDCleaningPlanner() {
-      const [nav, setNav]           = React.useState("dashboard");
-      const [selDay, setSelDay]     = React.useState(DOW);
-      const [selWeek, setSelWeek]   = React.useState(WEEKNUM);
-      const [selMonth, setSelMonth] = React.useState(MONTH);
-      const [selSeason, setSelSeason] = React.useState(SEASON);
-      const [dashTab, setDashTab]   = React.useState("today");
-      const [checked, setChecked]   = React.useState({});
-      const [overdueOpen, setOverdueOpen] = React.useState(true);
-      const [toast, setToast]       = React.useState(null);
-      const [lastAction, setLastAction] = React.useState(null);
-      const toastRef = React.useRef(null);
+      const [nav, setNav]             = useState("dashboard");
+      const [selDay, setSelDay]       = useState(DOW);
+      const [selWeek, setSelWeek]     = useState(WEEKNUM);
+      const [selMonth, setSelMonth]   = useState(MONTH);
+      const [selSeason, setSelSeason] = useState(SEASON);
+      const [dashTab, setDashTab]     = useState("today");
+      const [checked, setChecked]     = useState({});
+      const [overdueOpen, setOverdueOpen] = useState(true);
+      const [toast, setToast]         = useState(null);
+      const [lastAction, setLastAction]   = useState(null);
+      const toastRef = useRef(null);
 
-      const ck = (id, d) => `c_${id}_${d}`;
-      const dk = (id, d) => `d_${id}_${d}`;
-      const wk = (id, w) => `w_${id}_${w}`;
-      const mk = (id, m) => `m_${id}_${m}`;
-      const sk = (id, s) => `s_${id}_${s}`;
+      const ck = (id,d) => `c_${id}_${d}`;
+      const dk = (id,d) => `d_${id}_${d}`;
+      const wk = (id,w) => `w_${id}_${w}`;
+      const mk = (id,m) => `m_${id}_${m}`;
+      const sk = (id,s) => `s_${id}_${s}`;
 
       const showToast = msg => {
         setToast(msg);
@@ -582,7 +589,7 @@
         setChecked(prev => {
           const next = { ...prev, [key]: !prev[key] };
           setLastAction({ key, prevVal: !!prev[key] });
-          if (!prev[key]) setTimeout(() => showToast(TOASTS[Math.floor(Math.random() * TOASTS.length)]), 0);
+          if (!prev[key]) setTimeout(() => showToast(TOASTS[Math.floor(Math.random()*TOASTS.length)]), 0);
           return next;
         });
       };
@@ -594,7 +601,7 @@
         showToast("Undone.");
       };
 
-      const overdueTasks = React.useMemo(() => {
+      const overdueTasks = useMemo(() => {
         const items = [];
         for (let d = 0; d < DOW; d++) {
           const day = DAILY[d]; if (!day) continue;
@@ -607,71 +614,61 @@
       }, [checked]);
 
       const todayRot   = (DAILY[DOW]?.sections || []).flatMap(s => s.tasks);
-      const todayDone  = CORE.filter(t => checked[ck(t.id, DOW)]).length + todayRot.filter(t => checked[dk(t.id, DOW)]).length;
+      const todayDone  = CORE.filter(t=>checked[ck(t.id,DOW)]).length + todayRot.filter(t=>checked[dk(t.id,DOW)]).length;
       const todayTotal = CORE.length + todayRot.length;
-      const todayPct   = todayTotal ? Math.round(todayDone / todayTotal * 100) : 0;
-      const todayLeft  = [
-        ...CORE.filter(t => !checked[ck(t.id, DOW)]),
-        ...todayRot.filter(t => !checked[dk(t.id, DOW)]),
-      ].reduce((a, t) => a + t.time, 0);
+      const todayPct   = todayTotal ? Math.round(todayDone/todayTotal*100) : 0;
+      const todayLeft  = [...CORE.filter(t=>!checked[ck(t.id,DOW)]), ...todayRot.filter(t=>!checked[dk(t.id,DOW)])].reduce((a,t)=>a+t.time,0);
+      const weekTasks  = (WEEKLY[WEEKNUM]?.sections || []).flatMap(s=>s.tasks);
+      const weekDone   = weekTasks.filter(t=>checked[wk(t.id,WEEKNUM)]).length;
+      const weekPct    = weekTasks.length ? Math.round(weekDone/weekTasks.length*100) : 0;
 
-      const weekTasks = (WEEKLY[WEEKNUM]?.sections || []).flatMap(s => s.tasks);
-      const weekDone  = weekTasks.filter(t => checked[wk(t.id, WEEKNUM)]).length;
-      const weekPct   = weekTasks.length ? Math.round(weekDone / weekTasks.length * 100) : 0;
-
-      const renderSection = (section, keyFn, showHi = false) => {
-        const color  = gc(section.room);
-        const tasks  = section.tasks;
-        const done   = tasks.filter(t => checked[keyFn(t.id)]).length;
-        const pct    = tasks.length ? Math.round(done / tasks.length * 100) : 0;
-        const full   = done === tasks.length;
-
+      // Section Card
+      const renderSection = (section, keyFn, showHi=false) => {
+        const color = gc(section.room);
+        const tasks = section.tasks;
+        const done  = tasks.filter(t=>checked[keyFn(t.id)]).length;
+        const pct   = tasks.length ? Math.round(done/tasks.length*100) : 0;
+        const full  = done === tasks.length;
         return (
-          <div key={section.room + keyFn.toString()} style={{
-            background: "#fff", borderRadius: 10, marginBottom: 10,
-            borderLeft: `4px solid ${color}`,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.03)",
-            overflow: "hidden", opacity: full ? 0.78 : 1, transition: "opacity 0.35s",
+          <div key={section.room+String(keyFn)} style={{
+            background:"#fff", borderRadius:10, marginBottom:10,
+            borderLeft:`4px solid ${color}`,
+            boxShadow:"0 1px 3px rgba(0,0,0,0.07),0 0 0 1px rgba(0,0,0,0.03)",
+            overflow:"hidden", opacity:full?0.78:1, transition:"opacity 0.35s",
           }}>
-            <div style={{ padding: "11px 14px 9px", borderBottom: "1px solid #F4F4F4" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                  <span style={{ fontSize: 15 }}>{section.emoji}</span>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: "#111827" }}>{section.room}</span>
-                  {full && <span style={{ fontSize: 11, color: color, fontWeight: 700 }}>✓ Done</span>}
+            <div style={{padding:"11px 14px 9px", borderBottom:"1px solid #F4F4F4"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{display:"flex",alignItems:"center",gap:7}}>
+                  <span style={{fontSize:15}}>{section.emoji}</span>
+                  <span style={{fontWeight:700,fontSize:13,color:"#111827"}}>{section.room}</span>
+                  {full && <span style={{fontSize:11,color,fontWeight:700}}>✓ Done</span>}
                 </div>
-                <span style={{
-                  fontSize: 11, fontWeight: 700, color: color,
-                  background: `${color}14`, padding: "2px 8px", borderRadius: 99,
-                }}>{done}/{tasks.length} · {pct}%</span>
+                <span style={{fontSize:11,fontWeight:700,color,background:`${color}14`,padding:"2px 8px",borderRadius:99}}>
+                  {done}/{tasks.length} · {pct}%
+                </span>
               </div>
-              <div style={{ marginTop: 7, height: 4, background: "#F0F0F0", borderRadius: 99, overflow: "hidden" }}>
-                <div style={{
-                  height: "100%", width: `${pct}%`, background: color,
-                  borderRadius: 99, transition: "width 0.4s ease",
-                }} />
+              <div style={{marginTop:7,height:4,background:"#F0F0F0",borderRadius:99,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:99,transition:"width 0.4s ease"}} />
               </div>
             </div>
-
-            {tasks.map((task, i) => {
-              const k   = keyFn(task.id);
+            {tasks.map((task,i) => {
+              const k = keyFn(task.id);
               const isc = !!checked[k];
               return (
-                <div key={task.id} onClick={() => toggle(k)} style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "9px 14px",
-                  borderBottom: i < tasks.length - 1 ? "1px solid #F7F7F7" : "none",
-                  cursor: "pointer",
-                  background: task.hi && showHi && !isc ? `${color}07` : isc ? "#FBFBFC" : "#fff",
-                  transition: "background 0.12s",
+                <div key={task.id} onClick={()=>toggle(k)} style={{
+                  display:"flex",alignItems:"center",gap:10,padding:"9px 14px",
+                  borderBottom:i<tasks.length-1?"1px solid #F7F7F7":"none",
+                  cursor:"pointer",
+                  background:task.hi&&showHi&&!isc?`${color}07`:isc?"#FBFBFC":"#fff",
+                  transition:"background 0.12s",
                 }}>
                   <div style={{
-                    width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-                    border: isc ? "none" : "1.5px solid #D1D5DB",
-                    background: isc ? color : "#fff",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    transition: "all 0.18s",
-                    boxShadow: isc ? `0 0 0 2px ${color}30` : "none",
+                    width:20,height:20,borderRadius:5,flexShrink:0,
+                    border:isc?"none":"1.5px solid #D1D5DB",
+                    background:isc?color:"#fff",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    transition:"all 0.18s",
+                    boxShadow:isc?`0 0 0 2px ${color}30`:"none",
                   }}>
                     {isc && (
                       <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
@@ -680,24 +677,19 @@
                     )}
                   </div>
                   <span style={{
-                    fontSize: 13, fontWeight: 500, flex: 1, lineHeight: 1.45,
-                    color: isc ? "#9CA3AF" : "#1F2937",
-                    textDecoration: isc ? "line-through" : "none",
-                    transition: "all 0.2s",
+                    fontSize:13,fontWeight:500,flex:1,lineHeight:1.45,
+                    color:isc?"#9CA3AF":"#1F2937",
+                    textDecoration:isc?"line-through":"none",
+                    transition:"all 0.2s",
                   }}>
                     {task.text}
-                    {task.hi && showHi && !isc && (
-                      <span style={{
-                        marginLeft: 7, fontSize: 10, fontWeight: 700,
-                        color: color, background: `${color}18`,
-                        padding: "1px 6px", borderRadius: 99,
-                      }}>Focus</span>
+                    {task.hi&&showHi&&!isc && (
+                      <span style={{marginLeft:7,fontSize:10,fontWeight:700,color,background:`${color}18`,padding:"1px 6px",borderRadius:99}}>
+                        Focus
+                      </span>
                     )}
                   </span>
-                  <span style={{
-                    fontSize: 11, fontWeight: 600, flexShrink: 0,
-                    color: isc ? "#D1D5DB" : "#9CA3AF",
-                  }}>{task.time}m</span>
+                  <span style={{fontSize:11,fontWeight:600,flexShrink:0,color:isc?"#D1D5DB":"#9CA3AF"}}>{task.time}m</span>
                 </div>
               );
             })}
@@ -705,64 +697,42 @@
         );
       };
 
+      // Overdue Banner
       const renderOverdueBanner = () => {
         if (overdueTasks.length === 0) return null;
         return (
-          <div style={{
-            background: "#FFFBEB", border: "1px solid #FDE68A",
-            borderRadius: 10, marginBottom: 12, overflow: "hidden",
-          }}>
-            <div
-              onClick={() => setOverdueOpen(o => !o)}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "11px 14px", cursor: "pointer",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:10,marginBottom:12,overflow:"hidden"}}>
+            <div onClick={()=>setOverdueOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"11px 14px",cursor:"pointer"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <span>⚠️</span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: "#92400E" }}>
-                  {overdueTasks.length} task{overdueTasks.length > 1 ? "s" : ""} rolled over from earlier this week
+                <span style={{fontWeight:700,fontSize:13,color:"#92400E"}}>
+                  {overdueTasks.length} task{overdueTasks.length>1?"s":""} rolled over from earlier this week
                 </span>
               </div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#B45309" }}>
-                {overdueOpen ? "▲" : "▼"}
-              </span>
+              <span style={{fontSize:11,fontWeight:700,color:"#B45309"}}>{overdueOpen?"▲":"▼"}</span>
             </div>
             {overdueOpen && (
-              <div style={{ borderTop: "1px solid #FDE68A" }}>
-                {overdueTasks.map((task, i) => {
+              <div style={{borderTop:"1px solid #FDE68A"}}>
+                {overdueTasks.map((task,i) => {
                   const k   = dk(task.id, task.d);
                   const isc = !!checked[k];
                   return (
-                    <div key={k} onClick={() => toggle(k)} style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      padding: "9px 14px",
-                      borderBottom: i < overdueTasks.length - 1 ? "1px solid #FEF3C7" : "none",
-                      cursor: "pointer", background: "#FFFBEB",
+                    <div key={k} onClick={()=>toggle(k)} style={{
+                      display:"flex",alignItems:"center",gap:10,padding:"9px 14px",
+                      borderBottom:i<overdueTasks.length-1?"1px solid #FEF3C7":"none",
+                      cursor:"pointer",background:"#FFFBEB",
                     }}>
                       <div style={{
-                        width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-                        border: isc ? "none" : "1.5px solid #FCD34D",
-                        background: isc ? "#D97706" : "#fff",
-                        display: "flex", alignItems: "center", justifyContent: "center",
+                        width:20,height:20,borderRadius:5,flexShrink:0,
+                        border:isc?"none":"1.5px solid #FCD34D",
+                        background:isc?"#D97706":"#fff",
+                        display:"flex",alignItems:"center",justifyContent:"center",
                       }}>
-                        {isc && (
-                          <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
-                            <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
+                        {isc && <svg width="11" height="8" viewBox="0 0 11 8" fill="none"><path d="M1 4L4 7L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                       </div>
-                      <span style={{
-                        fontSize: 13, fontWeight: 500, flex: 1, lineHeight: 1.4,
-                        color: isc ? "#9CA3AF" : "#78350F",
-                        textDecoration: isc ? "line-through" : "none",
-                      }}>{task.text}</span>
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, color: "#B45309",
-                        background: "#FEF3C7", padding: "1px 7px", borderRadius: 99, flexShrink: 0,
-                      }}>{task.fromDay}</span>
-                      <span style={{ fontSize: 11, color: "#9CA3AF", flexShrink: 0 }}>{task.time}m</span>
+                      <span style={{fontSize:13,fontWeight:500,flex:1,lineHeight:1.4,color:isc?"#9CA3AF":"#78350F",textDecoration:isc?"line-through":"none"}}>{task.text}</span>
+                      <span style={{fontSize:10,fontWeight:700,color:"#B45309",background:"#FEF3C7",padding:"1px 7px",borderRadius:99,flexShrink:0}}>{task.fromDay}</span>
+                      <span style={{fontSize:11,color:"#9CA3AF",flexShrink:0}}>{task.time}m</span>
                     </div>
                   );
                 })}
@@ -772,342 +742,245 @@
         );
       };
 
-      const TabBar = ({ options, value, onChange, accent = "#1C1C2E" }) => (
-        <div style={{
-          display: "flex", gap: 6, marginBottom: 14,
-          background: "#fff", borderRadius: 10, padding: 7,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
-        }}>
+      // Tab bar
+      const TabBar = ({options, value, onChange, accent="#1C1C2E"}) => (
+        <div style={{display:"flex",gap:6,marginBottom:14,background:"#fff",borderRadius:10,padding:7,boxShadow:"0 1px 3px rgba(0,0,0,0.07)"}}>
           {options.map(o => {
             const sel = o.value === value;
             return (
-              <button key={o.value} onClick={() => onChange(o.value)} style={{
-                flex: 1, padding: "7px 6px", border: "none", borderRadius: 7,
-                fontFamily: F, fontWeight: 700, fontSize: 11, cursor: "pointer",
-                background: sel ? accent : "transparent",
-                color: sel ? "#fff" : o.accent || "#6B7280",
-                transition: "all 0.18s",
-              }}>
-                {o.label}
-              </button>
+              <button key={o.value} onClick={()=>onChange(o.value)} style={{
+                flex:1,padding:"7px 6px",border:"none",borderRadius:7,
+                fontFamily:F,fontWeight:700,fontSize:11,cursor:"pointer",
+                background:sel?accent:"transparent",
+                color:sel?"#fff":o.accent||"#6B7280",
+                transition:"all 0.18s",
+              }}>{o.label}</button>
             );
           })}
         </div>
       );
 
+      // Dashboard
       const renderDashboard = () => (
         <div>
-          <div style={{
-            background: "#fff", borderRadius: 10, marginBottom: 12, padding: "16px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.03)",
-          }}>
-            <div style={{
-              fontSize: 10, fontWeight: 700, color: "#9CA3AF",
-              letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12,
-            }}>At a Glance</div>
-            <div style={{ display: "flex", gap: 8 }}>
+          <div style={{background:"#fff",borderRadius:10,marginBottom:12,padding:"16px",boxShadow:"0 1px 3px rgba(0,0,0,0.07),0 0 0 1px rgba(0,0,0,0.03)"}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#9CA3AF",letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:12}}>At a Glance</div>
+            <div style={{display:"flex",gap:8}}>
               {[
-                { label: "Today", val: `${todayPct}%`, sub: `${todayDone} of ${todayTotal} tasks`, color: "#2563EB" },
-                { label: `Week ${WEEKNUM}`, val: `${weekPct}%`, sub: `${weekDone} of ${weekTasks.length} tasks`, color: "#059669" },
-                { label: "Overdue", val: overdueTasks.length, sub: "rolled forward", color: overdueTasks.length > 0 ? "#D97706" : "#6B7280" },
+                {label:"Today",val:`${todayPct}%`,sub:`${todayDone} of ${todayTotal} tasks`,color:"#2563EB"},
+                {label:`Week ${WEEKNUM}`,val:`${weekPct}%`,sub:`${weekDone} of ${weekTasks.length} tasks`,color:"#059669"},
+                {label:"Overdue",val:overdueTasks.length,sub:"rolled forward",color:overdueTasks.length>0?"#D97706":"#6B7280"},
               ].map(s => (
-                <div key={s.label} style={{
-                  flex: 1, background: "#F9FAFB", borderRadius: 8,
-                  padding: "10px 11px", borderLeft: `3px solid ${s.color}`,
-                }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
-                  <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 3 }}>{s.sub}</div>
+                <div key={s.label} style={{flex:1,background:"#F9FAFB",borderRadius:8,padding:"10px 11px",borderLeft:`3px solid ${s.color}`}}>
+                  <div style={{fontSize:9,fontWeight:700,color:"#9CA3AF",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{s.label}</div>
+                  <div style={{fontSize:22,fontWeight:800,color:s.color,lineHeight:1}}>{s.val}</div>
+                  <div style={{fontSize:10,color:"#9CA3AF",marginTop:3}}>{s.sub}</div>
                 </div>
               ))}
             </div>
           </div>
-
-          <TabBar
-            options={[{ value: "today", label: "Today's Tasks" }, { value: "week", label: "This Week" }]}
-            value={dashTab}
-            onChange={setDashTab}
-          />
-
-          {dashTab === "today" && (
+          <TabBar options={[{value:"today",label:"Today's Tasks"},{value:"week",label:"This Week"}]} value={dashTab} onChange={setDashTab} />
+          {dashTab==="today" && (
             <div>
               {renderOverdueBanner()}
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 8 }}>
-                Every Day
-              </div>
-              {renderSection(
-                { room: "Daily Essentials", emoji: "✓", tasks: CORE },
-                id => ck(id, DOW)
-              )}
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", margin: "14px 0 8px" }}>
-                {DAY_LABEL[DOW]}'s Focus
-              </div>
-              {(DAILY[DOW]?.sections || []).map(s => renderSection(s, id => dk(id, DOW)))}
+              <div style={{fontSize:10,fontWeight:700,color:"#9CA3AF",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:8}}>Every Day</div>
+              {renderSection({room:"Daily Essentials",emoji:"✓",tasks:CORE}, id=>ck(id,DOW))}
+              <div style={{fontSize:10,fontWeight:700,color:"#9CA3AF",letterSpacing:"0.07em",textTransform:"uppercase",margin:"14px 0 8px"}}>{DAY_LABEL[DOW]}'s Focus</div>
+              {(DAILY[DOW]?.sections||[]).map(s=>renderSection(s,id=>dk(id,DOW)))}
             </div>
           )}
-
-          {dashTab === "week" && (
+          {dashTab==="week" && (
             <div>
-              <div style={{
-                background: "#fff", borderRadius: 10, marginBottom: 12,
-                padding: "12px 14px", borderLeft: `4px solid ${gc("Office")}`,
-                boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
-              }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  {MO_LABEL[MONTH]} · {WEEKLY[WEEKNUM]?.label}
-                </div>
-                <div style={{ fontWeight: 800, fontSize: 16, color: "#111827", marginTop: 2 }}>
-                  {WEEKLY[WEEKNUM]?.focus}
-                </div>
+              <div style={{background:"#fff",borderRadius:10,marginBottom:12,padding:"12px 14px",borderLeft:`4px solid ${gc("Office")}`,boxShadow:"0 1px 3px rgba(0,0,0,0.07)"}}>
+                <div style={{fontSize:10,fontWeight:700,color:"#9CA3AF",textTransform:"uppercase",letterSpacing:"0.06em"}}>{MO_LABEL[MONTH]} · {WEEKLY[WEEKNUM]?.label}</div>
+                <div style={{fontWeight:800,fontSize:16,color:"#111827",marginTop:2}}>{WEEKLY[WEEKNUM]?.focus}</div>
               </div>
-              {(WEEKLY[WEEKNUM]?.sections || []).map(s => renderSection(s, id => wk(id, WEEKNUM)))}
+              {(WEEKLY[WEEKNUM]?.sections||[]).map(s=>renderSection(s,id=>wk(id,WEEKNUM)))}
             </div>
           )}
         </div>
       );
 
+      // Daily
       const renderDaily = () => (
         <div>
-          <TabBar
-            options={[0,1,2,3,4,5,6].map(d => ({
-              value: d,
-              label: DAY_SHORT[d],
-              accent: d === DOW ? "#2563EB" : "#9CA3AF",
-            }))}
-            value={selDay}
-            onChange={setSelDay}
-            accent="#1C1C2E"
-          />
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 14 }}>
-            <span style={{ fontWeight: 800, fontSize: 20, color: "#111827" }}>{DAY_LABEL[selDay]}</span>
-            {selDay === DOW && (
-              <span style={{
-                fontSize: 11, fontWeight: 700, color: "#fff", background: "#2563EB",
-                padding: "2px 8px", borderRadius: 99,
-              }}>Today</span>
-            )}
+          <TabBar options={[0,1,2,3,4,5,6].map(d=>({value:d,label:DAY_SHORT[d],accent:d===DOW?"#2563EB":"#9CA3AF"}))} value={selDay} onChange={setSelDay} accent="#1C1C2E" />
+          <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:14}}>
+            <span style={{fontWeight:800,fontSize:20,color:"#111827"}}>{DAY_LABEL[selDay]}</span>
+            {selDay===DOW && <span style={{fontSize:11,fontWeight:700,color:"#fff",background:"#2563EB",padding:"2px 8px",borderRadius:99}}>Today</span>}
           </div>
-          {selDay === DOW && renderOverdueBanner()}
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 8 }}>
-            Every Day
-          </div>
-          {renderSection({ room: "Daily Essentials", emoji: "✓", tasks: CORE }, id => ck(id, selDay))}
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase", margin: "14px 0 8px" }}>
-            {DAY_LABEL[selDay]}'s Focus
-          </div>
-          {(DAILY[selDay]?.sections || []).map(s => renderSection(s, id => dk(id, selDay)))}
+          {selDay===DOW && renderOverdueBanner()}
+          <div style={{fontSize:10,fontWeight:700,color:"#9CA3AF",letterSpacing:"0.07em",textTransform:"uppercase",marginBottom:8}}>Every Day</div>
+          {renderSection({room:"Daily Essentials",emoji:"✓",tasks:CORE},id=>ck(id,selDay))}
+          <div style={{fontSize:10,fontWeight:700,color:"#9CA3AF",letterSpacing:"0.07em",textTransform:"uppercase",margin:"14px 0 8px"}}>{DAY_LABEL[selDay]}'s Focus</div>
+          {(DAILY[selDay]?.sections||[]).map(s=>renderSection(s,id=>dk(id,selDay)))}
         </div>
       );
 
+      // Weekly
       const renderWeekly = () => (
         <div>
-          <TabBar
-            options={[1,2,3,4].map(w => ({
-              value: w,
-              label: w === WEEKNUM ? `Week ${w} · Now` : `Week ${w}`,
-              accent: w === WEEKNUM ? "#059669" : "#9CA3AF",
-            }))}
-            value={selWeek}
-            onChange={setSelWeek}
-            accent="#1C1C2E"
-          />
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 14 }}>
-            <span style={{ fontWeight: 800, fontSize: 20, color: "#111827" }}>{WEEKLY[selWeek]?.label}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#6B7280" }}>{WEEKLY[selWeek]?.focus}</span>
+          <TabBar options={[1,2,3,4].map(w=>({value:w,label:w===WEEKNUM?`Week ${w} · Now`:`Week ${w}`,accent:w===WEEKNUM?"#059669":"#9CA3AF"}))} value={selWeek} onChange={setSelWeek} accent="#1C1C2E" />
+          <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:14}}>
+            <span style={{fontWeight:800,fontSize:20,color:"#111827"}}>{WEEKLY[selWeek]?.label}</span>
+            <span style={{fontSize:13,fontWeight:600,color:"#6B7280"}}>{WEEKLY[selWeek]?.focus}</span>
           </div>
-          {(WEEKLY[selWeek]?.sections || []).map(s => renderSection(s, id => wk(id, selWeek)))}
+          {(WEEKLY[selWeek]?.sections||[]).map(s=>renderSection(s,id=>wk(id,selWeek)))}
         </div>
       );
 
+      // Monthly
       const renderMonthly = () => {
-        const md     = MONTHLY[selMonth];
-        const mColor = md?.color || "#4338CA";
-        const isNow  = selMonth === MONTH;
+        const md=MONTHLY[selMonth];
+        const mColor=md?.color||"#4338CA";
+        const isNow=selMonth===MONTH;
         return (
           <div>
-            <div style={{
-              display: "flex", gap: 4, marginBottom: 14,
-              background: "#fff", borderRadius: 10, padding: 7,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
-              overflowX: "auto", scrollbarWidth: "none",
-            }}>
-              {Array.from({ length: 12 }, (_, i) => {
-                const sel = i === selMonth;
-                const now = i === MONTH;
-                const mc  = MONTHLY[i]?.color || "#4338CA";
+            <div style={{display:"flex",gap:4,marginBottom:14,background:"#fff",borderRadius:10,padding:7,boxShadow:"0 1px 3px rgba(0,0,0,0.07)",overflowX:"auto",scrollbarWidth:"none"}}>
+              {Array.from({length:12},(_,i)=>{
+                const sel=i===selMonth;
+                const now=i===MONTH;
+                const mc=MONTHLY[i]?.color||"#4338CA";
                 return (
-                  <button key={i} onClick={() => setSelMonth(i)} style={{
-                    flexShrink: 0, padding: "6px 10px", border: "none", borderRadius: 6,
-                    fontFamily: F, fontWeight: 700, fontSize: 10, cursor: "pointer",
-                    background: sel ? mc : "transparent",
-                    color: sel ? "#fff" : now ? mc : "#9CA3AF",
-                    transition: "all 0.18s",
-                    position: "relative",
-                  }}>
-                    {MO_LABEL[i].slice(0, 3)}
-                    {now && !sel && (
-                      <span style={{
-                        display: "block", width: 4, height: 4,
-                        background: mc, borderRadius: "50%", margin: "2px auto 0",
-                      }} />
-                    )}
+                  <button key={i} onClick={()=>setSelMonth(i)} style={{flexShrink:0,padding:"6px 10px",border:"none",borderRadius:6,fontFamily:F,fontWeight:700,fontSize:10,cursor:"pointer",background:sel?mc:"transparent",color:sel?"#fff":now?mc:"#9CA3AF",transition:"all 0.18s",position:"relative"}}>
+                    {MO_LABEL[i].slice(0,3)}
+                    {now&&!sel && <span style={{display:"block",width:4,height:4,background:mc,borderRadius:"50%",margin:"2px auto 0"}} />}
                   </button>
                 );
               })}
             </div>
             {md && (
               <div>
-                <div style={{
-                  background: "#fff", borderRadius: 10, marginBottom: 12,
-                  padding: "13px 14px", borderLeft: `4px solid ${mColor}`,
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
-                }}>
-                  <div style={{ fontWeight: 800, fontSize: 20, color: "#111827" }}>{md.month}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 5 }}>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, color: mColor,
-                      background: `${mColor}18`, padding: "2px 8px", borderRadius: 99,
-                    }}>{isNow ? "This Month's Focus" : "Monthly Focus"}</span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "#6B7280" }}>{md.highlight}</span>
+                <div style={{background:"#fff",borderRadius:10,marginBottom:12,padding:"13px 14px",borderLeft:`4px solid ${mColor}`,boxShadow:"0 1px 3px rgba(0,0,0,0.07)"}}>
+                  <div style={{fontWeight:800,fontSize:20,color:"#111827"}}>{md.month}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginTop:5}}>
+                    <span style={{fontSize:10,fontWeight:700,color:mColor,background:`${mColor}18`,padding:"2px 8px",borderRadius:99}}>
+                      {isNow?"This Month's Focus":"Monthly Focus"}
+                    </span>
+                    <span style={{fontSize:12,fontWeight:600,color:"#6B7280"}}>{md.highlight}</span>
                   </div>
-                  {!isNow && (
-                    <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 6 }}>
-                      ★ tasks are highlighted when viewing the current month
-                    </div>
-                  )}
+                  {!isNow && <div style={{fontSize:11,color:"#9CA3AF",marginTop:6}}>★ tasks are highlighted when viewing the current month</div>}
                 </div>
-                {md.sections.map(s => renderSection(s, id => mk(id, selMonth), isNow))}
+                {md.sections.map(s=>renderSection(s,id=>mk(id,selMonth),isNow))}
               </div>
             )}
           </div>
         );
       };
 
+      // Seasonal
       const renderSeasonal = () => {
-        const sd    = SEASONAL[selSeason];
-        const isNow = selSeason === SEASON;
+        const sd=SEASONAL[selSeason];
+        const isNow=selSeason===SEASON;
         return (
           <div>
-            <TabBar
-              options={Object.entries(SEASONAL).map(([key, s]) => ({
-                value: key,
-                label: s.label,
-                accent: key === SEASON ? s.color : "#9CA3AF",
-              }))}
-              value={selSeason}
-              onChange={setSelSeason}
-              accent={sd?.color || "#4338CA"}
-            />
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <span style={{ fontWeight: 800, fontSize: 20, color: "#111827" }}>{sd?.label}</span>
-              {isNow && (
-                <span style={{
-                  fontSize: 11, fontWeight: 700, color: "#fff",
-                  background: sd?.color, padding: "2px 8px", borderRadius: 99,
-                }}>Current Season</span>
-              )}
+            <TabBar options={Object.entries(SEASONAL).map(([key,s])=>({value:key,label:s.label,accent:key===SEASON?s.color:"#9CA3AF"}))} value={selSeason} onChange={setSelSeason} accent={sd?.color||"#4338CA"} />
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+              <span style={{fontWeight:800,fontSize:20,color:"#111827"}}>{sd?.label}</span>
+              {isNow && <span style={{fontSize:11,fontWeight:700,color:"#fff",background:sd?.color,padding:"2px 8px",borderRadius:99}}>Current Season</span>}
             </div>
-            {sd?.sections.map(s => renderSection(s, id => sk(id, selSeason)))}
+            {sd?.sections.map(s=>renderSection(s,id=>sk(id,selSeason)))}
           </div>
         );
       };
 
       const NAV = [
-        { id: "dashboard", label: "Dashboard" },
-        { id: "daily",     label: "Daily"     },
-        { id: "weekly",    label: "Weekly"    },
-        { id: "monthly",   label: "Monthly"   },
-        { id: "seasonal",  label: "Seasonal"  },
+        {id:"dashboard",label:"Dashboard"},
+        {id:"daily",    label:"Daily"},
+        {id:"weekly",   label:"Weekly"},
+        {id:"monthly",  label:"Monthly"},
+        {id:"seasonal", label:"Seasonal"},
       ];
 
       return (
-        <div>
-          <div style={{ background: "#1C1C2E", color: "#fff", paddingTop: 20 }}>
-            <div style={{ maxWidth: 700, margin: "0 auto", padding: "0 16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+        <div style={{minHeight:"100vh",background:"#F0F2F5",fontFamily:F}}>
+          {/* Header */}
+          <div style={{background:"#1C1C2E",color:"#fff",paddingTop:"max(20px, env(safe-area-inset-top))"}}>
+            <div style={{maxWidth:700,margin:"0 auto",padding:"0 16px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
                 <div>
-                  <div style={{
-                    fontSize: 10, fontWeight: 700, color: "#6B7280",
-                    letterSpacing: "0.09em", textTransform: "uppercase", marginBottom: 3,
-                  }}>
-                    {TODAY.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                  <div style={{fontSize:10,fontWeight:700,color:"#6B7280",letterSpacing:"0.09em",textTransform:"uppercase",marginBottom:3}}>
+                    {TODAY.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"})}
                   </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.4px" }}>
-                    My Cleaning Planner
-                  </div>
+                  <div style={{fontSize:22,fontWeight:800,letterSpacing:"-0.4px"}}>My Cleaning Planner</div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
                   {lastAction && (
-                    <button onClick={undo} style={{
-                      background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)",
-                      color: "#fff", borderRadius: 8, padding: "5px 12px",
-                      fontFamily: F, fontWeight: 700, fontSize: 11, cursor: "pointer",
-                      letterSpacing: "0.03em", transition: "background 0.15s",
-                    }}>↩ Undo</button>
+                    <button onClick={undo} style={{background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.18)",color:"#fff",borderRadius:8,padding:"5px 12px",fontFamily:F,fontWeight:700,fontSize:11,cursor:"pointer"}}>
+                      ↩ Undo
+                    </button>
                   )}
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Today</div>
-                    <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, color: todayPct >= 100 ? "#34D399" : "#fff" }}>
-                      {todayPct}%
-                    </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:9,color:"#6B7280",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Today</div>
+                    <div style={{fontSize:28,fontWeight:800,lineHeight:1,color:todayPct>=100?"#34D399":"#fff"}}>{todayPct}%</div>
                   </div>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8, paddingBottom: 14 }}>
+              <div style={{display:"flex",gap:8,paddingBottom:14}}>
                 {[
-                  { label: "Done today",   val: `${todayDone}/${todayTotal}`, color: "#60A5FA" },
-                  { label: "Est. left",    val: `~${todayLeft}m`,             color: "#34D399" },
-                  { label: "Overdue",      val: overdueTasks.length,          color: overdueTasks.length > 0 ? "#FBBF24" : "#4B5563" },
+                  {label:"Done today",val:`${todayDone}/${todayTotal}`,color:"#60A5FA"},
+                  {label:"Est. left",val:`~${todayLeft}m`,color:"#34D399"},
+                  {label:"Overdue",val:overdueTasks.length,color:overdueTasks.length>0?"#FBBF24":"#4B5563"},
                 ].map(s => (
-                  <div key={s.label} style={{
-                    flex: 1, background: "rgba(255,255,255,0.06)",
-                    borderRadius: 8, padding: "8px 10px",
-                  }}>
-                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
-                      {s.label}
-                    </div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: s.color }}>{s.val}</div>
+                  <div key={s.label} style={{flex:1,background:"rgba(255,255,255,0.06)",borderRadius:8,padding:"8px 10px"}}>
+                    <div style={{fontSize:9,color:"#6B7280",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:2}}>{s.label}</div>
+                    <div style={{fontSize:16,fontWeight:800,color:s.color}}>{s.val}</div>
                   </div>
                 ))}
               </div>
-              <div style={{ display: "flex", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{display:"flex",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
                 {NAV.map(t => (
-                  <button key={t.id} onClick={() => setNav(t.id)} style={{
-                    flex: 1, padding: "10px 2px", border: "none", background: "transparent",
-                    fontWeight: 700, fontSize: 10, letterSpacing: "0.04em", cursor: "pointer",
-                    color: nav === t.id ? "#fff" : "#6B7280",
-                    borderBottom: nav === t.id ? "2px solid #60A5FA" : "2px solid transparent",
-                    transition: "all 0.18s",
+                  <button key={t.id} onClick={()=>setNav(t.id)} style={{
+                    flex:1,padding:"10px 2px",border:"none",background:"transparent",
+                    fontWeight:700,fontSize:10,letterSpacing:"0.04em",cursor:"pointer",
+                    color:nav===t.id?"#fff":"#6B7280",
+                    borderBottom:nav===t.id?"2px solid #60A5FA":"2px solid transparent",
+                    transition:"all 0.18s",
                   }}>{t.label}</button>
                 ))}
               </div>
             </div>
           </div>
-          <div style={{ maxWidth: 700, margin: "0 auto", padding: "16px 16px 60px" }}>
-            {nav === "dashboard" && renderDashboard()}
-            {nav === "daily"     && renderDaily()}
-            {nav === "weekly"    && renderWeekly()}
-            {nav === "monthly"   && renderMonthly()}
-            {nav === "seasonal"  && renderSeasonal()}
+
+          {/* Content */}
+          <div style={{maxWidth:700,margin:"0 auto",padding:"16px 16px 80px"}}>
+            {nav==="dashboard" && renderDashboard()}
+            {nav==="daily"     && renderDaily()}
+            {nav==="weekly"    && renderWeekly()}
+            {nav==="monthly"   && renderMonthly()}
+            {nav==="seasonal"  && renderSeasonal()}
           </div>
+
+          {/* Toast */}
           {toast && (
             <div style={{
-              position: "fixed", bottom: 24, left: "50%",
-              background: "#1C1C2E", color: "#fff",
-              borderRadius: 10, padding: "11px 22px",
-              fontWeight: 700, fontSize: 13,
-              border: "1px solid rgba(255,255,255,0.12)",
-              boxShadow: "0 8px 28px rgba(0,0,0,0.35)",
-              animation: "slideUp 0.25s ease",
-              zIndex: 999, whiteSpace: "nowrap", maxWidth: "90vw",
-              transform: "translateX(-50%)", textAlign: "center",
+              position:"fixed",bottom:24,left:"50%",
+              background:"#1C1C2E",color:"#fff",
+              borderRadius:10,padding:"11px 22px",
+              fontWeight:700,fontSize:13,
+              border:"1px solid rgba(255,255,255,0.12)",
+              boxShadow:"0 8px 28px rgba(0,0,0,0.35)",
+              animation:"slideUp 0.25s ease",
+              zIndex:999,whiteSpace:"nowrap",maxWidth:"90vw",
+              transform:"translateX(-50%)",textAlign:"center",
             }}>{toast}</div>
           )}
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<ADHDCleaningPlanner />);
+    // Mount
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<ADHDCleaningPlanner />);
+
+    // Register Service Worker
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js")
+          .then(r => console.log("SW registered:", r.scope))
+          .catch(e => console.log("SW error:", e));
+      });
+    }
   </script>
 </body>
 </html>
